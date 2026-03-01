@@ -1,0 +1,434 @@
+// =============================================================================
+// Design Tokens
+// =============================================================================
+
+// Status colors from Sketch file
+$status-open-bg: #d4d7ff;
+$status-open-text: #3e40db;
+$status-open-badge-bg: #edeeff;
+
+$status-in-progress-bg: #d6d8ff;
+$status-in-progress-text: #3e40db;
+$status-in-progress-badge-bg: #edeeff;
+
+$status-complete-bg: #d1fab3;
+$status-complete-text: #08a268;
+$status-complete-badge-bg: #e1ffcc;
+
+$status-blocked-bg: #fceeb5;
+$status-blocked-text: #b13600;
+$status-blocked-badge-bg: #fff5cf;
+
+$color-text-dark: #030929;
+$color-text-secondary: #687196;
+$color-bg-white: #ffffff;
+$color-border: #dee0ff;
+
+$bar-height: 38px;
+$bar-radius: 8px;
+
+// =============================================================================
+// Host
+// =============================================================================
+:host {
+  position: absolute;
+  top: 5px;
+  height: $bar-height;
+  z-index: 5;
+  display: block;
+}
+
+// =============================================================================
+// Work Order Bar
+// =============================================================================
+.work-order-bar {
+  position: absolute;
+  height: $bar-height;
+  border-radius: $bar-radius;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(86, 89, 255, 0.15);
+    transform: translateY(-1px);
+
+    .bar-menu-btn {
+      opacity: 1;
+    }
+
+    .resize-handle {
+      opacity: 1;
+    }
+  }
+
+  // --- Status variants ---
+  &.status-open {
+    background: $status-open-bg;
+    border: 1px solid rgba($status-open-text, 0.15);
+  }
+
+  &.status-in-progress {
+    background: $status-in-progress-bg;
+    border: 1px solid rgba($status-in-progress-text, 0.15);
+  }
+
+  &.status-complete {
+    background: $status-complete-bg;
+    border: 1px solid rgba($status-complete-text, 0.15);
+  }
+
+  &.status-blocked {
+    background: $status-blocked-bg;
+    border: 1px solid rgba($status-blocked-text, 0.15);
+  }
+}
+
+// =============================================================================
+// Progress Fill (in-progress bars only)
+// =============================================================================
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: $bar-radius 0 0 $bar-radius;
+  pointer-events: none;
+  z-index: 0;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .status-in-progress & {
+    background: rgba($status-in-progress-text, 0.12);
+  }
+}
+
+// =============================================================================
+// Drag-to-Resize Handles
+// =============================================================================
+.resize-handle {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.15s ease-out, background-color 0.15s ease-out;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    background: rgba($color-text-dark, 0.25);
+    transition: background-color 0.15s ease-out;
+  }
+
+  &:hover::after {
+    background: rgba($color-text-dark, 0.5);
+  }
+
+  &-left {
+    left: 0;
+    cursor: col-resize;
+    border-radius: $bar-radius 0 0 $bar-radius;
+
+    &::after {
+      left: 2px;
+    }
+  }
+
+  &-right {
+    right: 0;
+    cursor: col-resize;
+    border-radius: 0 $bar-radius $bar-radius 0;
+
+    &::after {
+      right: 2px;
+    }
+  }
+
+  &:hover {
+    background: rgba($color-text-dark, 0.04);
+  }
+}
+
+// --- Bar content ---
+.bar-name {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-dark;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+// =============================================================================
+// Status Badge with Color-Blind Accessible Icons
+// =============================================================================
+.bar-status-badge {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  padding: 2px 10px;
+  white-space: nowrap;
+  line-height: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .status-icon {
+    flex-shrink: 0;
+  }
+
+  &.status-open {
+    background: $status-open-badge-bg;
+    color: $status-open-text;
+  }
+
+  &.status-in-progress {
+    background: $status-in-progress-badge-bg;
+    color: $status-in-progress-text;
+  }
+
+  &.status-complete {
+    background: $status-complete-badge-bg;
+    color: $status-complete-text;
+  }
+
+  &.status-blocked {
+    background: $status-blocked-badge-bg;
+    color: $status-blocked-text;
+  }
+}
+
+// --- Three-dot Menu Button ---
+.bar-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: $color-text-secondary;
+  opacity: 0;
+  transition: opacity 0.15s ease-out, background-color 0.15s ease-out;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+  }
+}
+
+// --- Dropdown Menu ---
+.bar-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 4px;
+  z-index: 100;
+  background: $color-bg-white;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 4px 0;
+  min-width: 140px;
+  box-shadow: 0 5px 15px rgba(200, 207, 233, 0.5);
+  animation: dropdownSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: none;
+    background: none;
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-text-dark;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background-color 0.1s ease-out;
+
+    &:hover {
+      background: rgba(86, 89, 255, 0.04);
+    }
+
+    &.delete {
+      color: #b13600;
+
+      &:hover {
+        background: rgba(177, 54, 0, 0.04);
+      }
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+  }
+}
+
+// --- Tooltip ---
+.bar-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: $color-text-dark;
+  color: $color-bg-white;
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 200px;
+  pointer-events: none;
+  animation: tooltipEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(3, 9, 41, 0.2);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: $color-text-dark;
+  }
+
+  .tooltip-name {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .tooltip-status {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-block;
+    border-radius: 10px;
+    padding: 1px 8px;
+    margin-bottom: 4px;
+
+    &.status-open {
+      background: rgba($status-open-text, 0.2);
+      color: #9b9dff;
+    }
+
+    &.status-in-progress {
+      background: rgba($status-in-progress-text, 0.2);
+      color: #9b9dff;
+    }
+
+    &.status-complete {
+      background: rgba($status-complete-text, 0.2);
+      color: #6dd8a7;
+    }
+
+    &.status-blocked {
+      background: rgba($status-blocked-text, 0.2);
+      color: #e88b54;
+    }
+  }
+
+  .tooltip-dates {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 2px;
+  }
+
+  // Relative time label
+  .tooltip-relative {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 2px;
+  }
+
+  // Progress indicator in tooltip
+  .tooltip-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    .tooltip-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      overflow: hidden;
+
+      .tooltip-progress-fill {
+        height: 100%;
+        background: #9b9dff;
+        border-radius: 2px;
+        transition: width 0.3s ease-out;
+      }
+    }
+
+    .tooltip-progress-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      min-width: 28px;
+      text-align: right;
+    }
+  }
+}
+
+// =============================================================================
+// Animations
+// =============================================================================
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes tooltipEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

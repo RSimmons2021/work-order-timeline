@@ -1,0 +1,48 @@
+$color-primary: #5659ff;
+$color-border-light: #eef0ff;
+$color-bg-page: #f7f9fc;
+
+.minimap-container {
+  padding: 0 32px 8px;
+  padding-left: 380px + 32px; // sidebar width + padding
+}
+
+.minimap-track {
+  position: relative;
+  height: 42px;
+  background: $color-bg-page;
+  border: 1px solid $color-border-light;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.minimap-bar {
+  position: absolute;
+  height: 4px;
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.minimap-viewport {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba($color-primary, 0.08);
+  border: 1.5px solid rgba($color-primary, 0.3);
+  border-radius: 4px;
+  cursor: grab;
+  transition: border-color 0.15s ease-out, background-color 0.15s ease-out;
+
+  &:hover {
+    background: rgba($color-primary, 0.12);
+    border-color: rgba($color-primary, 0.5);
+  }
+
+  &.dragging {
+    cursor: grabbing;
+    background: rgba($color-primary, 0.15);
+    border-color: $color-primary;
+  }
+}

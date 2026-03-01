@@ -1,0 +1,23 @@
+<div class="minimap-container" aria-label="Timeline overview">
+  <div class="minimap-track" (click)="onMinimapClick($event)">
+    <!-- Work order bars (compressed) -->
+    @for (bar of bars; track $index) {
+      <div
+        class="minimap-bar"
+        [style.left.%]="bar.left"
+        [style.width.%]="bar.width"
+        [style.top.px]="bar.top * 6 + 2"
+        [style.background]="bar.color"
+      ></div>
+    }
+
+    <!-- Viewport indicator -->
+    <div
+      class="minimap-viewport"
+      [class.dragging]="isDragging"
+      [style.left.%]="viewportLeftPercent"
+      [style.width.%]="viewportWidthPercent"
+      (mousedown)="onViewportMouseDown($event)"
+    ></div>
+  </div>
+</div>

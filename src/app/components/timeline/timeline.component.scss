@@ -1,0 +1,524 @@
+// =============================================================================
+// Design Tokens (extracted from Sketch file)
+// =============================================================================
+$color-primary: #5659ff;
+$color-primary-dark: #3e40db;
+$color-text-dark: #030929;
+$color-text-secondary: #687196;
+$color-text-muted: #a4aac0;
+$color-bg-white: #ffffff;
+$color-bg-page: #f7f9fc;
+$color-bg-sidebar: #f9faff;
+$color-bg-hover: rgba(86, 89, 255, 0.04);
+$color-border: #dee0ff;
+$color-border-light: #eef0ff;
+$color-grid-line: #eef0ff;
+$color-today-line: #5659ff;
+$color-today-pill-bg: #edeeff;
+$color-today-pill-text: #3e40db;
+
+// Dimensions
+$sidebar-width: 380px;
+$row-height: 48px;
+$header-height: 34px;
+$bar-height: 38px;
+
+// =============================================================================
+// Page Header (Naologic logo + hints)
+// =============================================================================
+.page-header {
+  padding: 24px 32px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-hints {
+  display: flex;
+  gap: 6px;
+
+  .hint-btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+
+    kbd {
+      font-family: 'Circular-Std', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: $color-text-muted;
+      background: $color-bg-page;
+      border: 1px solid $color-border;
+      border-radius: 4px;
+      padding: 3px 8px;
+      transition: border-color 0.15s ease-out, color 0.15s ease-out;
+    }
+
+    &:hover kbd {
+      border-color: $color-primary;
+      color: $color-primary;
+    }
+  }
+}
+
+.logo {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  user-select: none;
+
+  .logo-nao {
+    color: $color-primary;
+  }
+
+  .logo-logic {
+    color: $color-text-dark;
+  }
+}
+
+// =============================================================================
+// Timeline Container
+// =============================================================================
+.timeline-container {
+  padding: 0 0 0 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.timeline-title-bar {
+  padding: 28px 32px 0;
+}
+
+.page-title {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: $color-text-dark;
+  margin: 0;
+  line-height: 1.3;
+}
+
+// =============================================================================
+// Controls Bar (Timescale + Today button)
+// =============================================================================
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 32px;
+}
+
+.zoom-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  background: $color-bg-white;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 0;
+  overflow: visible;
+
+  .zoom-label {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    padding: 6px 0 6px 12px;
+    user-select: none;
+  }
+
+  .zoom-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: $color-primary-dark;
+    background: none;
+    border: none;
+    padding: 6px 12px 6px 8px;
+    cursor: pointer;
+    outline: none;
+    transition: color 0.15s ease-out;
+
+    .chevron {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      color: $color-primary;
+    }
+
+    &.open .chevron {
+      transform: rotate(180deg);
+    }
+  }
+
+  .zoom-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 100;
+    background: $color-bg-white;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    padding: 4px 0;
+    margin: 0;
+    list-style: none;
+    min-width: 120px;
+    box-shadow: 0 5px 15px rgba(216, 220, 235, 0.5);
+    transform-origin: top left;
+    animation: dropdownEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+    .zoom-option {
+      display: flex;
+      align-items: center;
+      font-family: 'Circular-Std', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: $color-text-dark;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background-color 0.1s ease-out;
+
+      &:hover {
+        background: $color-bg-hover;
+      }
+
+      &.active {
+        color: $color-primary;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.today-btn {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: $color-primary;
+  background: $color-bg-white;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+
+  &:hover {
+    background: $color-bg-hover;
+    box-shadow: 0 2px 4px rgba(86, 89, 255, 0.08);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.zoom-hint {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: $color-text-muted;
+  margin-left: auto;
+}
+
+.zoom-shortcut {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: $color-text-muted;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: auto;
+}
+
+// =============================================================================
+// Timeline Table
+// =============================================================================
+.timeline-table {
+  border-top: 1px solid $color-border-light;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// --- Header ---
+.table-header {
+  display: flex;
+  border-bottom: 1px solid $color-border-light;
+  min-height: $header-height;
+
+  .header-sidebar {
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    border-right: 1px solid $color-border-light;
+    background: $color-bg-white;
+
+    .header-label {
+      font-family: 'Circular-Std', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      color: $color-text-secondary;
+      text-transform: none;
+    }
+  }
+
+  .header-timeline {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+
+    .header-columns {
+      display: flex;
+      position: relative;
+      height: $header-height;
+    }
+
+    .header-col {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding-left: 12px;
+      border-right: 1px solid $color-grid-line;
+      box-sizing: border-box;
+
+      .col-label {
+        font-family: 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+        color: $color-text-secondary;
+        white-space: nowrap;
+      }
+
+      &.current-period .col-label {
+        color: $color-primary-dark;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// --- Body ---
+.table-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+
+  .body-sidebar {
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    background: $color-bg-white;
+    border-right: 1px solid $color-border-light;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Hide scrollbar for cleaner look */
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .sidebar-row {
+      height: $row-height;
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      border-bottom: 1px solid $color-border-light;
+      transition: background-color 0.15s ease-out;
+
+      &.hovered {
+        background: $color-bg-hover;
+      }
+
+      .center-name {
+        font-family: 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+        color: $color-text-dark;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  .body-timeline {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+
+    /* Custom scrollbar */
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: $color-bg-page;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $color-border;
+      border-radius: 3px;
+
+      &:hover {
+        background: $color-text-muted;
+      }
+    }
+  }
+}
+
+// --- Grid Canvas ---
+.grid-canvas {
+  position: relative;
+  min-height: calc(#{$row-height} * 6 + 100px);
+}
+
+.grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: $color-grid-line;
+  pointer-events: none;
+  z-index: 0;
+}
+
+// --- Today Indicator ---
+.today-indicator {
+  position: absolute;
+  top: -42px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .today-label-pill {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-today-pill-text;
+    background: $color-today-pill-bg;
+    border-radius: 12px;
+    padding: 3px 12px;
+    white-space: nowrap;
+    margin-bottom: 4px;
+    transform: translateX(-50%);
+  }
+
+  .today-line {
+    width: 2px;
+    background: $color-today-line;
+    position: absolute;
+    top: 32px;
+    bottom: 0;
+    left: -1px;
+    height: calc(#{$row-height} * 8 + 200px);
+    opacity: 0.6;
+  }
+}
+
+// --- Timeline Rows ---
+.timeline-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: $row-height;
+  border-bottom: 1px solid $color-border-light;
+  cursor: pointer;
+  transition: background-color 0.15s ease-out;
+
+  &.hovered {
+    background: $color-bg-hover;
+  }
+
+  &:hover {
+    background: $color-bg-hover;
+  }
+}
+
+// =============================================================================
+// Drag-to-Create Ghost Bar
+// =============================================================================
+.drag-create-ghost {
+  position: absolute;
+  height: 38px;
+  background: rgba($color-primary, 0.12);
+  border: 2px dashed rgba($color-primary, 0.4);
+  border-radius: 8px;
+  z-index: 8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ghostPulse 1s ease-in-out infinite;
+
+  .ghost-label {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-primary-dark;
+    white-space: nowrap;
+    opacity: 0.8;
+  }
+}
+
+@keyframes ghostPulse {
+  0%, 100% { border-color: rgba($color-primary, 0.4); }
+  50% { border-color: rgba($color-primary, 0.7); }
+}
+
+// =============================================================================
+// Panel Backdrop
+// =============================================================================
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 9, 41, 0.1);
+  z-index: 999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+// =============================================================================
+// Animations
+// =============================================================================
+@keyframes dropdownEnter {
+  from {
+    opacity: 0;
+    transform: scaleY(0.9) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// =============================================================================
+// Reduced Motion
+// =============================================================================
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

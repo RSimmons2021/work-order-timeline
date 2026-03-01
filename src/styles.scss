@@ -1,0 +1,76 @@
+/* =============================================================================
+   Global Styles - Work Order Timeline
+   ============================================================================= */
+
+/* Circular Std Font */
+@import url('https://naologic-com-assets.naologic.com/fonts/circular-std/circular-std.css');
+
+/* ng-select default theme (will be heavily overridden in components) */
+@import '@ng-select/ng-select/themes/default.theme.css';
+
+/* CSS Reset */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: 'Circular-Std', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #030929;
+  background: #ffffff;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Focus ring for accessibility */
+:focus-visible {
+  outline: 2px solid #5659ff;
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f7f9fc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #dee0ff;
+  border-radius: 3px;
+
+  &:hover {
+    background: #a4aac0;
+  }
+}
+
+/* Selection color */
+::selection {
+  background: rgba(86, 89, 255, 0.15);
+  color: #030929;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

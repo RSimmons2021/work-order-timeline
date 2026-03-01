@@ -1,0 +1,231 @@
+<!-- Header Area -->
+<header class="page-header">
+  <div class="logo">
+    <span class="logo-nao">NAO</span><span class="logo-logic">LOGIC</span>
+  </div>
+  <!-- Keyboard shortcut hint -->
+  <div class="header-hints">
+    <button class="hint-btn" (click)="commandPaletteOpen = true" aria-label="Open command palette">
+      <kbd>⌘K</kbd>
+    </button>
+    <button class="hint-btn" (click)="shortcutsOverlayOpen = true" aria-label="Show keyboard shortcuts">
+      <kbd>?</kbd>
+    </button>
+  </div>
+</header>
+
+<div class="timeline-container">
+  <!-- Title + Controls -->
+  <div class="timeline-title-bar">
+    <h1 class="page-title">Work Orders</h1>
+  </div>
+
+  <div class="timeline-controls">
+    <div class="zoom-dropdown" (click)="$event.stopPropagation()">
+      <span class="zoom-label">Timescale</span>
+      <button
+        class="zoom-trigger"
+        (click)="toggleZoomDropdown()"
+        [class.open]="zoomDropdownOpen"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="zoomDropdownOpen"
+      >
+        {{ currentZoomLabel }}
+        <svg class="chevron" width="10" height="6" viewBox="0 0 10 6" fill="none">
+          <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      @if (zoomDropdownOpen) {
+        <ul class="zoom-menu" role="listbox">
+          @for (opt of zoomOptions; track opt.value) {
+            <li
+              class="zoom-option"
+              [class.active]="opt.value === zoomLevel"
+              role="option"
+              [attr.aria-selected]="opt.value === zoomLevel"
+              (click)="onZoomChange(opt.value)"
+            >
+              {{ opt.label }}
+              <kbd class="zoom-shortcut">{{ opt.value === 'day' ? '1' : opt.value === 'week' ? '2' : '3' }}</kbd>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <button class="today-btn" (click)="scrollToToday(true)">
+      Today
+    </button>
+
+    <span class="zoom-hint">Ctrl + scroll to zoom</span>
+  </div>
+
+  <!-- Timeline Table -->
+  <div class="timeline-table">
+    <!-- Table Header -->
+    <div class="table-header">
+      <div class="header-sidebar">
+        <span class="header-label">Work Center</span>
+      </div>
+      <div class="header-timeline" #timelineHeader>
+        <div class="header-columns" [style.width.px]="totalTimelineWidth">
+          @for (col of columns; track trackByColumn($index)) {
+            <div
+              class="header-col"
+              [class.current-period]="col.isCurrentPeriod"
+              [style.width.px]="columnWidth"
+              [style.left.px]="$index * columnWidth"
+            >
+              <span class="col-label">{{ col.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Body -->
+    <div class="table-body">
+      <!-- Left sidebar (fixed) -->
+      <div class="body-sidebar">
+        @for (center of workCenters; track trackByCenter($index, center)) {
+          <div
+            class="sidebar-row"
+            [class.hovered]="hoveredRowId === center.docId"
+            (mouseenter)="onRowHover(center.docId)"
+            (mouseleave)="onRowLeave()"
+          >
+            <span class="center-name">{{ center.data.name }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Right timeline grid (scrollable) -->
+      <div
+        class="body-timeline"
+        [style.cursor]="cursorStyle"
+        #timelineGrid
+        (scroll)="onGridScroll()"
+        (wheel)="onWheelZoom($event)"
+        (mousemove)="onTimelineMouseMove($event)"
+      >
+        <div
+          class="grid-canvas"
+          [style.width.px]="totalTimelineWidth"
+        >
+          <!-- Grid lines (vertical) -->
+          @for (col of columns; track trackByColumn($index)) {
+            <div
+              class="grid-line"
+              [style.left.px]="$index * columnWidth"
+            ></div>
+          }
+
+          <!-- Today indicator -->
+          <div
+            class="today-indicator"
+            #todayIndicator
+            [style.left.px]="todayPosition"
+          >
+            <div class="today-label-pill">{{ todayLabel }}</div>
+            <div class="today-line"></div>
+          </div>
+
+          <!-- Drag-to-create ghost bar -->
+          @if (dragCreating) {
+            <div
+              class="drag-create-ghost"
+              [style.left.px]="dragCreateLeft"
+              [style.width.px]="dragCreateWidth"
+              [style.top.px]="getDragCreateTop(dragCreateCenterId)"
+            >
+              <span class="ghost-label">{{ dragCreateStartDate }} → {{ dragCreateEndDate }}</span>
+            </div>
+          }
+
+          <!-- Row layers for each work center -->
+          @for (center of workCenters; track trackByCenter($index, center)) {
+            <div
+              class="timeline-row"
+              [class.hovered]="hoveredRowId === center.docId"
+              [style.top.px]="$index * 48"
+              (mouseenter)="onRowHover(center.docId)"
+              (mouseleave)="onRowLeave()"
+              (click)="onTimelineClick($event, center.docId)"
+              (mousedown)="onTimelineMouseDown($event, center.docId)"
+            >
+              <!-- Work order bars -->
+              @for (order of getOrdersForCenter(center.docId); track trackByOrder($index, order)) {
+                <app-work-order-bar
+                  [order]="order"
+                  [left]="getActiveBarStyle(order).left"
+                  [width]="getActiveBarStyle(order).width"
+                  (edit)="onEditOrder(order)"
+                  (delete)="onDeleteOrder(order)"
+                  (resizeStart)="onBarResizeStart(order, $event)"
+                />
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimap / Overview Strip -->
+  <app-minimap
+    [workOrders]="workOrders"
+    [workCenters]="workCenters"
+    [timelineStartDate]="timelineStartDate"
+    [timelineEndDate]="timelineEndDate"
+    [viewportLeftPercent]="minimapViewportLeft"
+    [viewportWidthPercent]="minimapViewportWidth"
+    (viewportDrag)="onMinimapNavigate($event)"
+  />
+</div>
+
+<!-- Slide-out Panel -->
+@if (panelOpen) {
+  <app-work-order-panel
+    [mode]="panelMode"
+    [workCenterId]="panelWorkCenterId"
+    [startDate]="panelStartDate"
+    [editingOrder]="editingOrder"
+    [workCenters]="workCenters"
+    (save)="onPanelSave()"
+    (cancel)="closePanel()"
+  />
+}
+
+<!-- Backdrop for panel -->
+@if (panelOpen) {
+  <div
+    class="panel-backdrop"
+    (click)="closePanel()"
+  ></div>
+}
+
+<!-- Undo Toast -->
+@if (undoToastVisible) {
+  <app-undo-toast
+    [message]="undoToastMessage"
+    (undo)="onUndoDelete()"
+    (dismissed)="onUndoToastDismissed()"
+  />
+}
+
+<!-- Command Palette -->
+@if (commandPaletteOpen) {
+  <app-command-palette
+    [workOrders]="workOrders"
+    [workCenters]="workCenters"
+    (execute)="onCommandExecute($event)"
+    (close)="commandPaletteOpen = false"
+  />
+}
+
+<!-- Keyboard Shortcuts Overlay -->
+@if (shortcutsOverlayOpen) {
+  <app-keyboard-shortcuts
+    (close)="shortcutsOverlayOpen = false"
+  />
+}

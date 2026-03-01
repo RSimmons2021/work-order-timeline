@@ -1,0 +1,18 @@
+<div
+  class="undo-toast"
+  role="alert"
+  aria-live="polite"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()"
+>
+  <div class="toast-content">
+    <svg class="toast-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 4H12M5 4V2.5C5 2.22386 5.22386 2 5.5 2H8.5C8.77614 2 9 2.22386 9 2.5V4M11 4V11.5C11 11.7761 10.7761 12 10.5 12H3.5C3.22386 12 3 11.7761 3 11.5V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="toast-message">{{ message }}</span>
+    <button class="toast-undo-btn" (click)="onUndo()">Undo</button>
+  </div>
+  <div class="toast-progress">
+    <div class="toast-progress-bar" [style.width.%]="progress"></div>
+  </div>
+</div>

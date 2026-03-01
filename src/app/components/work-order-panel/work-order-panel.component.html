@@ -1,0 +1,186 @@
+<div class="panel-container" role="dialog" aria-label="Work Order Details">
+  <!-- Panel Header -->
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <h2 class="panel-title">Work Order Details</h2>
+      <p class="panel-subtitle">
+        Specify the dates, name and status of the work order.
+      </p>
+    </div>
+    <div class="panel-header-actions">
+      <button
+        class="btn-secondary"
+        type="button"
+        (click)="onCancel()"
+      >
+        Cancel
+      </button>
+      <button
+        class="btn-primary"
+        type="button"
+        (click)="onSubmit()"
+        [disabled]="form.invalid"
+      >
+        {{ mode === 'create' ? 'Create' : 'Save' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="panel-divider"></div>
+
+  <!-- Panel Body / Form -->
+  <form class="panel-body" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <!-- Work Order Name -->
+    <div class="form-group">
+      <label class="form-label" for="woName">Work Order Name</label>
+      <input
+        id="woName"
+        type="text"
+        class="form-input"
+        formControlName="name"
+        placeholder="Enter work order name"
+        [class.error]="hasError('name')"
+        autocomplete="off"
+      />
+      @if (hasError('name')) {
+        <span class="form-error">Name is required</span>
+      }
+    </div>
+
+    <!-- Status Dropdown (ng-select) -->
+    <div class="form-group">
+      <label class="form-label" for="woStatus">Status</label>
+      <ng-select
+        id="woStatus"
+        formControlName="status"
+        [items]="statusOptions"
+        bindLabel="label"
+        bindValue="value"
+        [clearable]="false"
+        [searchable]="false"
+        placeholder="Select status"
+        class="status-select"
+        [class.error]="hasError('status')"
+      ></ng-select>
+      @if (hasError('status')) {
+        <span class="form-error">Status is required</span>
+      }
+    </div>
+
+    <!-- Start Date (ngb-datepicker) -->
+    <div class="form-group">
+      <label class="form-label" for="woStartDate">Start Date</label>
+      <div class="date-input-wrapper">
+        <input
+          id="woStartDate"
+          class="form-input date-input"
+          formControlName="startDate"
+          ngbDatepicker
+          #dpStart="ngbDatepicker"
+          placeholder="YYYY-MM-DD"
+          [class.error]="hasError('startDate')"
+          (click)="dpStart.toggle()"
+          readonly
+        />
+        <button
+          type="button"
+          class="date-toggle-btn"
+          (click)="dpStart.toggle()"
+          aria-label="Toggle start date picker"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M2 6.5H14" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M5.5 1.5V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M10.5 1.5V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      @if (hasError('startDate')) {
+        <span class="form-error">Start date is required</span>
+      }
+    </div>
+
+    <!-- End Date (ngb-datepicker) -->
+    <div class="form-group">
+      <label class="form-label" for="woEndDate">End Date</label>
+      <div class="date-input-wrapper">
+        <input
+          id="woEndDate"
+          class="form-input date-input"
+          formControlName="endDate"
+          ngbDatepicker
+          #dpEnd="ngbDatepicker"
+          placeholder="YYYY-MM-DD"
+          [class.error]="hasError('endDate')"
+          (click)="dpEnd.toggle()"
+          readonly
+        />
+        <button
+          type="button"
+          class="date-toggle-btn"
+          (click)="dpEnd.toggle()"
+          aria-label="Toggle end date picker"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M2 6.5H14" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M5.5 1.5V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M10.5 1.5V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      @if (hasError('endDate')) {
+        <span class="form-error">End date is required</span>
+      }
+    </div>
+
+    <!-- Date range error -->
+    @if (form.errors?.['dateRange']) {
+      <div class="form-error-block">
+        {{ form.errors?.['dateRange'] }}
+      </div>
+    }
+
+    <!-- Overlap error with conflict resolution suggestions -->
+    @if (overlapError) {
+      <div class="form-error-block overlap-error">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 5V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+        </svg>
+        {{ overlapError }}
+      </div>
+
+      <!-- Slot suggestions -->
+      @if (slotSuggestions.length > 0) {
+        <div class="suggestions-container">
+          <span class="suggestions-label">Available time slots:</span>
+          @for (suggestion of slotSuggestions; track suggestion.startDate) {
+            <button
+              type="button"
+              class="suggestion-btn"
+              (click)="applySuggestion(suggestion)"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="1.5" y="2.5" width="11" height="9.5" rx="1.5" stroke="currentColor" stroke-width="1.1"/>
+                <path d="M1.5 5.5H12.5" stroke="currentColor" stroke-width="1.1"/>
+              </svg>
+              <div class="suggestion-text">
+                <span class="suggestion-dates">{{ suggestion.startDate }} → {{ suggestion.endDate }}</span>
+                <span class="suggestion-hint">{{ suggestion.label }}</span>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    }
+
+    <!-- Work Center display -->
+    <div class="form-group work-center-display">
+      <span class="form-label">Work Center</span>
+      <span class="work-center-value">{{ workCenterName }}</span>
+    </div>
+  </form>
+</div>
