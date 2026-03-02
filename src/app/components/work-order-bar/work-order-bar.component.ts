@@ -4,12 +4,9 @@ import {
   Output,
   EventEmitter,
   HostListener,
-  ElementRef,
-  AfterViewInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WorkOrderDocument } from '../../models/work-order.model';
-import gsap from 'gsap';
 
 @Component({
   selector: 'app-work-order-bar',
@@ -17,33 +14,37 @@ import gsap from 'gsap';
   imports: [CommonModule],
   templateUrl: './work-order-bar.component.html',
   styleUrl: './work-order-bar.component.scss',
+  host: {
+    '[style.top.px]': 'top',
+  },
 })
-export class WorkOrderBarComponent implements AfterViewInit {
+// @upgrade: Add drag-to-move (reposition) bars horizontally across the
+// timeline. Currently only resize is supported — full drag would allow
+// rescheduling by dragging a bar to a new date range or different work center.
+export class WorkOrderBarComponent {
   @Input({ required: true }) order!: WorkOrderDocument;
   @Input() left = 0;
   @Input() width = 100;
+  @Input() top = 5;
+
+  /** Prevent all clicks/mousedowns on the bar from reaching the timeline row */
+  @HostListener('click', ['$event'])
+  onHostClick(event: MouseEvent): void {
+    event.stopPropagation();
+  }
+
+  @HostListener('mousedown', ['$event'])
+  onHostMouseDown(event: MouseEvent): void {
+    event.stopPropagation();
+  }
 
   @Output() edit = new EventEmitter<void>();
   @Output() delete = new EventEmitter<void>();
   @Output() resizeStart = new EventEmitter<{ side: 'left' | 'right'; event: MouseEvent }>();
+  /** Emits viewport position when three-dot button is clicked */
+  @Output() menuClick = new EventEmitter<{ x: number; y: number }>();
 
-  menuOpen = false;
   showTooltip = false;
-
-  constructor(private elementRef: ElementRef) {}
-
-  ngAfterViewInit(): void {
-    const bar = this.elementRef.nativeElement.querySelector('.work-order-bar');
-    if (bar) {
-      gsap.from(bar, {
-        opacity: 0,
-        scaleX: 0.85,
-        duration: 0.45,
-        ease: 'power3.out',
-        clearProps: 'all',
-      });
-    }
-  }
 
   get statusLabel(): string {
     switch (this.order.data.status) {
@@ -62,10 +63,6 @@ export class WorkOrderBarComponent implements AfterViewInit {
 
   get statusClass(): string {
     return `status-${this.order.data.status}`;
-  }
-
-  get tooltipText(): string {
-    return `${this.order.data.name}\n${this.statusLabel}\n${this.order.data.startDate} → ${this.order.data.endDate}`;
   }
 
   /** Progress percentage for in-progress bars (0-100) */
@@ -99,30 +96,13 @@ export class WorkOrderBarComponent implements AfterViewInit {
     }
   }
 
-  toggleMenu(event: MouseEvent): void {
+  /** Three-dot menu button clicked — emit viewport position for dropdown */
+  onMenuClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.menuOpen = !this.menuOpen;
-  }
-
-  onEdit(event: MouseEvent): void {
-    event.stopPropagation();
-    this.menuOpen = false;
-    this.edit.emit();
-  }
-
-  onDelete(event: MouseEvent): void {
-    event.stopPropagation();
-    this.menuOpen = false;
-
-    const bar = this.elementRef.nativeElement.querySelector('.work-order-bar');
-    gsap.to(bar, {
-      opacity: 0,
-      scaleX: 0.9,
-      scaleY: 0.9,
-      duration: 0.25,
-      ease: 'power2.in',
-      onComplete: () => this.delete.emit(),
-    });
+    event.preventDefault();
+    const btn = event.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    this.menuClick.emit({ x: rect.right, y: rect.bottom + 4 });
   }
 
   /** Start drag-to-resize from left or right edge */
@@ -130,13 +110,6 @@ export class WorkOrderBarComponent implements AfterViewInit {
     event.stopPropagation();
     event.preventDefault();
     this.resizeStart.emit({ side, event });
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (!this.elementRef.nativeElement.contains(event.target)) {
-      this.menuOpen = false;
-    }
   }
 
   onBarMouseEnter(): void {

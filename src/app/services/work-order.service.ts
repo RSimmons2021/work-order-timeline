@@ -34,6 +34,9 @@ export class WorkOrderService {
     this.loadFromStorage();
   }
 
+  // @upgrade: Replace localStorage with IndexedDB (via idb library) for larger
+  // datasets and structured queries. localStorage has a ~5MB limit and blocks
+  // the main thread on serialization.
   /** Load data from localStorage, falling back to sample data */
   private loadFromStorage(): void {
     const centersJson = localStorage.getItem(STORAGE_KEY_CENTERS);
@@ -54,6 +57,8 @@ export class WorkOrderService {
     localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(this.workOrdersSignal()));
   }
 
+  // @upgrade: Use crypto.randomUUID() for guaranteed uniqueness, or a
+  // server-assigned ID when backed by a real API.
   private generateId(): string {
     return 'wo-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }

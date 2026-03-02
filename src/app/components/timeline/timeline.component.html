@@ -21,36 +21,24 @@
   </div>
 
   <div class="timeline-controls">
-    <div class="zoom-dropdown" (click)="$event.stopPropagation()">
+    <div class="zoom-dropdown-wrapper">
       <span class="zoom-label">Timescale</span>
-      <button
-        class="zoom-trigger"
-        (click)="toggleZoomDropdown()"
-        [class.open]="zoomDropdownOpen"
-        aria-haspopup="listbox"
-        [attr.aria-expanded]="zoomDropdownOpen"
+      <ng-select
+        class="zoom-select"
+        [items]="zoomOptions"
+        bindLabel="label"
+        bindValue="value"
+        [ngModel]="zoomLevel"
+        [clearable]="false"
+        [searchable]="false"
+        (ngModelChange)="onZoomSelectChange($event)"
+        aria-label="Timescale zoom level"
       >
-        {{ currentZoomLabel }}
-        <svg class="chevron" width="10" height="6" viewBox="0 0 10 6" fill="none">
-          <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-      @if (zoomDropdownOpen) {
-        <ul class="zoom-menu" role="listbox">
-          @for (opt of zoomOptions; track opt.value) {
-            <li
-              class="zoom-option"
-              [class.active]="opt.value === zoomLevel"
-              role="option"
-              [attr.aria-selected]="opt.value === zoomLevel"
-              (click)="onZoomChange(opt.value)"
-            >
-              {{ opt.label }}
-              <kbd class="zoom-shortcut">{{ opt.value === 'day' ? '1' : opt.value === 'week' ? '2' : '3' }}</kbd>
-            </li>
-          }
-        </ul>
-      }
+        <ng-template ng-option-tmp let-item="item">
+          <span class="zoom-option-label">{{ item.label }}</span>
+          <kbd class="zoom-shortcut">{{ item.value === 'day' ? '1' : item.value === 'week' ? '2' : '3' }}</kbd>
+        </ng-template>
+      </ng-select>
     </div>
 
     <button class="today-btn" (click)="scrollToToday(true)">
@@ -69,7 +57,7 @@
       </div>
       <div class="header-timeline" #timelineHeader>
         <div class="header-columns" [style.width.px]="totalTimelineWidth">
-          @for (col of columns; track trackByColumn($index)) {
+          @for (col of columns; track col.date.toISOString()) {
             <div
               class="header-col"
               [class.current-period]="col.isCurrentPeriod"
@@ -91,6 +79,7 @@
           <div
             class="sidebar-row"
             [class.hovered]="hoveredRowId === center.docId"
+            [style.height.px]="getRowHeight(center.docId)"
             (mouseenter)="onRowHover(center.docId)"
             (mouseleave)="onRowLeave()"
           >
@@ -111,9 +100,10 @@
         <div
           class="grid-canvas"
           [style.width.px]="totalTimelineWidth"
+          [style.height.px]="totalRowsHeight"
         >
           <!-- Grid lines (vertical) -->
-          @for (col of columns; track trackByColumn($index)) {
+          @for (col of columns; track col.date.toISOString()) {
             <div
               class="grid-line"
               [style.left.px]="$index * columnWidth"
@@ -147,7 +137,8 @@
             <div
               class="timeline-row"
               [class.hovered]="hoveredRowId === center.docId"
-              [style.top.px]="$index * 48"
+              [style.top.px]="getRowTop($index)"
+              [style.height.px]="getRowHeight(center.docId)"
               (mouseenter)="onRowHover(center.docId)"
               (mouseleave)="onRowLeave()"
               (click)="onTimelineClick($event, center.docId)"
@@ -159,9 +150,11 @@
                   [order]="order"
                   [left]="getActiveBarStyle(order).left"
                   [width]="getActiveBarStyle(order).width"
+                  [top]="getBarTop(center.docId, $index)"
                   (edit)="onEditOrder(order)"
                   (delete)="onDeleteOrder(order)"
                   (resizeStart)="onBarResizeStart(order, $event)"
+                  (menuClick)="onBarMenuClick(order, $event)"
                 />
               }
             </div>
@@ -193,6 +186,7 @@
     [workCenters]="workCenters"
     (save)="onPanelSave()"
     (cancel)="closePanel()"
+    (deleteOrder)="onPanelDelete()"
   />
 }
 
@@ -202,6 +196,48 @@
     class="panel-backdrop"
     (click)="closePanel()"
   ></div>
+}
+
+<!-- Three-dot Context Menu (rendered at timeline level to avoid overflow clipping) -->
+@if (menuOpen && menuOrder) {
+  <div
+    class="bar-context-menu"
+    [style.left.px]="menuX"
+    [style.top.px]="menuY"
+  >
+    <button class="context-menu-item" (click)="onMenuEdit()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M10.08 1.42a1.5 1.5 0 0 1 2.12 0l.38.38a1.5 1.5 0 0 1 0 2.12L5.5 11H3v-2.5l7.08-7.08z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Edit
+    </button>
+    <button class="context-menu-item context-menu-delete" (click)="onMenuDelete()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M2 3.5h10M5 3.5V2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M11 3.5V12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Delete
+    </button>
+  </div>
+}
+
+<!-- Delete Confirmation Dialog -->
+@if (deleteConfirmOpen && deleteConfirmOrder) {
+  <div class="confirm-backdrop" (click)="cancelDelete()"></div>
+  <div class="confirm-dialog" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-desc">
+    <div class="confirm-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M12 9v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h3 id="confirm-title" class="confirm-title">Delete work order?</h3>
+    <p id="confirm-desc" class="confirm-desc">
+      "<strong>{{ deleteConfirmOrder.data.name }}</strong>" will be removed. You can undo this action briefly after deletion.
+    </p>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn-cancel" (click)="cancelDelete()">Cancel</button>
+      <button class="confirm-btn confirm-btn-delete" (click)="confirmDelete()">Delete</button>
+    </div>
+  </div>
 }
 
 <!-- Undo Toast -->

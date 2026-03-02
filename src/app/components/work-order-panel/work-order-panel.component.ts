@@ -49,6 +49,7 @@ export class WorkOrderPanelComponent implements OnInit, AfterViewInit, OnDestroy
 
   @Output() save = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
+  @Output() deleteOrder = new EventEmitter<void>();
 
   form!: FormGroup;
   overlapError = '';
@@ -120,6 +121,9 @@ export class WorkOrderPanelComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
+  // @upgrade: Add real-time overlap validation as user changes dates (not just
+  // on submit). Could use an async validator that checks the service on each
+  // date change with debounce.
   /** Cross-field validator: endDate must be after startDate */
   private dateRangeValidator = (group: AbstractControl): ValidationErrors | null => {
     const start = group.get('startDate')?.value as NgbDateStruct | null;

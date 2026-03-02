@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { WorkOrderService, UndoAction } from '../../services/work-order.service';
 import { WorkCenterDocument } from '../../models/work-center.model';
 import { WorkOrderDocument } from '../../models/work-order.model';
@@ -37,6 +38,7 @@ interface TimelineColumn {
   imports: [
     CommonModule,
     FormsModule,
+    NgSelectModule,
     WorkOrderBarComponent,
     WorkOrderPanelComponent,
     UndoToastComponent,
@@ -55,7 +57,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   workCenters: WorkCenterDocument[] = [];
   workOrders: WorkOrderDocument[] = [];
 
-  zoomLevel: ZoomLevel = 'month';
+  zoomLevel: ZoomLevel = 'week';
   zoomOptions = [
     { label: 'Day', value: 'day' as ZoomLevel },
     { label: 'Week', value: 'week' as ZoomLevel },
@@ -63,7 +65,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   columns: TimelineColumn[] = [];
-  columnWidth = 114;
+  columnWidth = 90;
 
   // Panel state
   panelOpen = false;
@@ -83,7 +85,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   timelineStartDate!: Date;
   timelineEndDate!: Date;
 
-  // Dropdown state
+  // Zoom dropdown (ng-select bound value)
   zoomDropdownOpen = false;
 
   // Undo toast state
@@ -117,6 +119,21 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   minimapViewportLeft = 0;
   minimapViewportWidth = 20;
 
+  // Three-dot context menu state
+  menuOpen = false;
+  menuOrder: WorkOrderDocument | null = null;
+  menuX = 0;
+  menuY = 0;
+
+  // Delete confirmation dialog state
+  deleteConfirmOpen = false;
+  deleteConfirmOrder: WorkOrderDocument | null = null;
+
+  // Infinite scroll state
+  private infiniteScrollLocked = false;
+  private readonly SCROLL_EDGE_THRESHOLD = 200; // px from edge to trigger
+  private readonly COLUMNS_PER_BATCH = 10; // columns to add per batch
+
   // Contextual cursor state
   cursorStyle = 'default';
 
@@ -137,6 +154,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
       this.scrollToToday(false);
       this.animateInitialLoad();
       this.updateMinimapViewport();
+      // Trigger infinite scroll check after initial layout
+      this.checkInfiniteScroll();
     });
   }
 
@@ -160,7 +179,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     switch (this.zoomLevel) {
       case 'day':
         this.columnWidth = 60;
-        for (let i = -30; i <= 30; i++) {
+        for (let i = -45; i <= 45; i++) {
           const d = new Date(today);
           d.setDate(d.getDate() + i);
           this.columns.push({
@@ -191,7 +210,7 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
       case 'month':
         this.columnWidth = 114;
-        for (let i = -6; i <= 6; i++) {
+        for (let i = -12; i <= 12; i++) {
           const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
           const isCurrentMonth =
             d.getFullYear() === today.getFullYear() &&
@@ -249,6 +268,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // @upgrade: Replace linear date-to-pixel mapping with virtual scrolling for
+  // large date ranges. Current approach generates all columns upfront which
+  // limits performance past ~200 columns. A virtualized renderer would only
+  // create DOM nodes for visible columns.
   dateToPixelPosition(date: Date): number {
     if (!this.timelineStartDate) return 0;
     const totalMs = this.timelineEndDate.getTime() - this.timelineStartDate.getTime();
@@ -274,13 +297,47 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     return { left, width: Math.max(right - left, 20) };
   }
 
+  // @upgrade: Memoize this with a Map<centerId, WorkOrderDocument[]> that
+  // invalidates on workOrders change, to avoid re-filtering on every render cycle.
   getOrdersForCenter(centerId: string): WorkOrderDocument[] {
     return this.workOrders.filter((wo) => wo.data.workCenterId === centerId);
+  }
+
+  /** Height of a row based on how many orders it contains (bar height = 38px + 5px gaps) */
+  getRowHeight(centerId: string): number {
+    const count = this.getOrdersForCenter(centerId).length;
+    return Math.max(48, count * 43 + 5); // 43 = 38px bar + 5px gap, minimum 48px
+  }
+
+  /** Top offset (px) for a row based on cumulative heights of preceding rows */
+  getRowTop(centerIndex: number): number {
+    let top = 0;
+    for (let i = 0; i < centerIndex; i++) {
+      top += this.getRowHeight(this.workCenters[i].docId);
+    }
+    return top;
+  }
+
+  /** Top offset for a bar within its row, based on its index */
+  getBarTop(centerId: string, orderIndex: number): number {
+    return orderIndex * 43 + 5; // 43 = 38px bar height + 5px gap
+  }
+
+  /** Total height of all rows combined */
+  get totalRowsHeight(): number {
+    return this.workCenters.reduce((sum, c) => sum + this.getRowHeight(c.docId), 0);
   }
 
   // =========================================================================
   // Zoom Controls (with animated transitions)
   // =========================================================================
+
+  /** Called by ng-select (ngModelChange) — receives the bindValue string */
+  onZoomSelectChange(value: ZoomLevel): void {
+    if (value) {
+      this.onZoomChange(value);
+    }
+  }
 
   onZoomChange(level: ZoomLevel): void {
     if (level === this.zoomLevel) return;
@@ -290,14 +347,24 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     const centerPx = scrollBefore + containerWidth / 2;
     const centerDate = this.pixelPositionToDate(centerPx);
 
+    // Lock infinite scroll during the entire zoom transition to prevent
+    // prepend/append from corrupting column state mid-animation
+    this.infiniteScrollLocked = true;
+
     this.zoomLevel = level;
     this.zoomDropdownOpen = false;
     this.generateColumns();
 
+    // Force DOM update before reading pixel positions so columns are rendered
+    this.cdr.detectChanges();
+
     // Animate zoom transition
     requestAnimationFrame(() => {
       const newCenterPx = this.dateToPixelPosition(centerDate);
-      const targetScroll = newCenterPx - containerWidth / 2;
+      const targetScroll = Math.max(0, newCenterPx - containerWidth / 2);
+
+      // Set scroll position immediately first so bars render in correct place
+      this.timelineGrid.nativeElement.scrollLeft = targetScroll;
 
       // GSAP animated zoom transition
       const gridLines = this.timelineGrid?.nativeElement.querySelectorAll('.grid-line');
@@ -322,14 +389,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         });
       }
 
-      // Smooth scroll to maintain position
-      gsap.to(this.timelineGrid.nativeElement, {
-        scrollLeft: targetScroll,
-        duration: 0.4,
-        ease: 'power3.out',
-      });
-
-      // Animate work order bars
+      // Animate work order bars (do NOT use clearProps: 'all' — it strips
+      // Angular's host element bindings like [style.top.px] and [style.left.px])
       const bars = this.timelineGrid.nativeElement.querySelectorAll('app-work-order-bar');
       gsap.from(bars, {
         opacity: 0,
@@ -337,8 +398,15 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         duration: 0.35,
         stagger: 0.02,
         ease: 'power3.out',
-        clearProps: 'all',
+        clearProps: 'opacity,scaleX',
       });
+
+      // Unlock infinite scroll after animations settle
+      setTimeout(() => {
+        this.infiniteScrollLocked = false;
+        this.checkInfiniteScroll();
+        this.updateMinimapViewport();
+      }, 450);
 
       this.updateMinimapViewport();
     });
@@ -347,13 +415,18 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   scrollToToday(animate = true): void {
     if (!this.timelineGrid) return;
     const container = this.timelineGrid.nativeElement;
-    const targetScroll = this.todayPosition - container.clientWidth / 2;
+    const targetScroll = Math.max(0, this.todayPosition - container.clientWidth / 2);
 
     if (animate) {
+      this.infiniteScrollLocked = true;
       gsap.to(container, {
         scrollLeft: targetScroll,
         duration: 0.5,
         ease: 'power3.out',
+        onComplete: () => {
+          this.infiniteScrollLocked = false;
+          this.checkInfiniteScroll();
+        },
       });
     } else {
       container.scrollLeft = targetScroll;
@@ -436,8 +509,10 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.openPanel();
       }
 
-      this.dragCreating = false;
       this.cdr.detectChanges();
+      setTimeout(() => {
+        this.dragCreating = false;
+      });
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -454,11 +529,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getDragCreateTop(centerId: string): number {
     const index = this.workCenters.findIndex((c) => c.docId === centerId);
-    return index * 48 + 5;
+    return this.getRowTop(index) + 5;
   }
 
   // =========================================================================
   // Drag-to-Resize Bars
+  // @upgrade: Add snap-to-grid behavior so bars align to column boundaries
+  // when resizing. Also add overlap validation during resize (live feedback)
+  // instead of only validating on drop.
   // =========================================================================
 
   onBarResizeStart(order: WorkOrderDocument, event: { side: 'left' | 'right'; event: MouseEvent }): void {
@@ -508,16 +586,21 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
       document.removeEventListener('mouseup', onMouseUp);
 
       if (this.resizeOrder) {
-        const result = this.workOrderService.updateWorkOrder(
+        this.workOrderService.updateWorkOrder(
           this.resizeOrder.docId,
           this.resizeOrder.data
         );
         this.refreshData();
       }
 
-      this.resizing = false;
       this.resizeOrder = null;
       this.cdr.detectChanges();
+
+      // Delay clearing resizing flag so the click event that follows
+      // mouseup still sees resizing=true and gets suppressed
+      setTimeout(() => {
+        this.resizing = false;
+      });
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -561,6 +644,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onDeleteOrder(order: WorkOrderDocument): void {
+    this.deleteConfirmOrder = order;
+    this.deleteConfirmOpen = true;
+  }
+
+  confirmDelete(): void {
+    if (!this.deleteConfirmOrder) return;
+
+    const order = this.deleteConfirmOrder;
     const action = this.workOrderService.deleteWorkOrder(order.docId);
     this.refreshData();
 
@@ -569,6 +660,14 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
       this.undoToastMessage = `"${order.data.name}" deleted`;
       this.undoToastVisible = true;
     }
+
+    this.deleteConfirmOpen = false;
+    this.deleteConfirmOrder = null;
+  }
+
+  cancelDelete(): void {
+    this.deleteConfirmOpen = false;
+    this.deleteConfirmOrder = null;
   }
 
   onUndoDelete(): void {
@@ -601,6 +700,13 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   onPanelSave(): void {
     this.refreshData();
     this.closePanel();
+  }
+
+  onPanelDelete(): void {
+    if (this.editingOrder) {
+      this.onDeleteOrder(this.editingOrder);
+      this.closePanel();
+    }
   }
 
   // =========================================================================
@@ -675,6 +781,156 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
         this.timelineGrid.nativeElement.scrollLeft;
     }
     this.updateMinimapViewport();
+    this.checkInfiniteScroll();
+  }
+
+  // =========================================================================
+  // Infinite Horizontal Scroll
+  // Dynamically prepend/append columns when the user scrolls near edges.
+  // When prepending, scrollLeft is adjusted to maintain the visual position.
+  // =========================================================================
+
+  private checkInfiniteScroll(): void {
+    if (this.infiniteScrollLocked || !this.timelineGrid) return;
+
+    const container = this.timelineGrid.nativeElement;
+    const scrollLeft = container.scrollLeft;
+    const scrollRight = container.scrollWidth - container.clientWidth - scrollLeft;
+
+    if (scrollRight < this.SCROLL_EDGE_THRESHOLD) {
+      this.appendColumns();
+    }
+
+    if (scrollLeft < this.SCROLL_EDGE_THRESHOLD) {
+      this.prependColumns();
+    }
+  }
+
+  private appendColumns(): void {
+    this.infiniteScrollLocked = true;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastCol = this.columns[this.columns.length - 1];
+
+    for (let i = 1; i <= this.COLUMNS_PER_BATCH; i++) {
+      const d = this.getNextColumnDate(lastCol.date, i);
+      this.columns.push(this.createColumn(d, today));
+    }
+
+    this.updateTimelineRange();
+    this.cdr.detectChanges();
+
+    // Allow next scroll check after a short cooldown
+    requestAnimationFrame(() => {
+      this.infiniteScrollLocked = false;
+    });
+  }
+
+  private prependColumns(): void {
+    this.infiniteScrollLocked = true;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const firstCol = this.columns[0];
+    const addedWidth = this.COLUMNS_PER_BATCH * this.columnWidth;
+    const newCols: TimelineColumn[] = [];
+
+    for (let i = this.COLUMNS_PER_BATCH; i >= 1; i--) {
+      const d = this.getPrevColumnDate(firstCol.date, i);
+      newCols.push(this.createColumn(d, today));
+    }
+
+    this.columns = [...newCols, ...this.columns];
+    this.updateTimelineRange();
+    this.cdr.detectChanges();
+
+    // Adjust scroll position to keep the viewport in place
+    requestAnimationFrame(() => {
+      if (this.timelineGrid) {
+        this.timelineGrid.nativeElement.scrollLeft += addedWidth;
+        if (this.timelineHeader) {
+          this.timelineHeader.nativeElement.scrollLeft = this.timelineGrid.nativeElement.scrollLeft;
+        }
+      }
+      this.infiniteScrollLocked = false;
+    });
+  }
+
+  /** Create a single TimelineColumn for a given date */
+  private createColumn(date: Date, today: Date): TimelineColumn {
+    switch (this.zoomLevel) {
+      case 'day':
+        return {
+          label: this.formatDayLabel(date),
+          date: new Date(date),
+          isToday: date.getTime() === today.getTime(),
+          isCurrentPeriod: date.getTime() === today.getTime(),
+        };
+      case 'week': {
+        const isCurrentWeek =
+          today >= date && today < new Date(date.getTime() + 7 * 86400000);
+        return {
+          label: this.formatWeekLabel(date),
+          date: new Date(date),
+          isToday: false,
+          isCurrentPeriod: isCurrentWeek,
+        };
+      }
+      case 'month': {
+        const isCurrentMonth =
+          date.getFullYear() === today.getFullYear() &&
+          date.getMonth() === today.getMonth();
+        return {
+          label: this.formatMonthLabel(date),
+          date: new Date(date),
+          isToday: false,
+          isCurrentPeriod: isCurrentMonth,
+        };
+      }
+    }
+  }
+
+  /** Get the date N steps after `from` based on current zoom level */
+  private getNextColumnDate(from: Date, steps: number): Date {
+    const d = new Date(from);
+    switch (this.zoomLevel) {
+      case 'day':
+        d.setDate(d.getDate() + steps);
+        break;
+      case 'week':
+        d.setDate(d.getDate() + steps * 7);
+        break;
+      case 'month':
+        d.setMonth(d.getMonth() + steps);
+        break;
+    }
+    return d;
+  }
+
+  /** Get the date N steps before `from` based on current zoom level */
+  private getPrevColumnDate(from: Date, steps: number): Date {
+    const d = new Date(from);
+    switch (this.zoomLevel) {
+      case 'day':
+        d.setDate(d.getDate() - steps);
+        break;
+      case 'week':
+        d.setDate(d.getDate() - steps * 7);
+        break;
+      case 'month':
+        d.setMonth(d.getMonth() - steps);
+        break;
+    }
+    return d;
+  }
+
+  /** Update timelineStartDate, timelineEndDate, and todayPosition after columns change */
+  private updateTimelineRange(): void {
+    if (this.columns.length > 0) {
+      this.timelineStartDate = this.columns[0].date;
+      const lastCol = this.columns[this.columns.length - 1];
+      this.timelineEndDate = this.getColumnEndDate(lastCol.date);
+    }
+    this.calculateTodayPosition();
   }
 
   onRowHover(centerId: string): void {
@@ -696,14 +952,25 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
-    if (!target.closest('.zoom-dropdown')) {
+    if (!target.closest('.zoom-dropdown-wrapper') && !target.closest('ng-dropdown-panel')) {
       this.zoomDropdownOpen = false;
+    }
+    if (!target.closest('.bar-context-menu') && !target.closest('.bar-menu-btn')) {
+      this.closeMenu();
     }
   }
 
   @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
+      if (this.deleteConfirmOpen) {
+        this.cancelDelete();
+        return;
+      }
+      if (this.menuOpen) {
+        this.closeMenu();
+        return;
+      }
       if (this.commandPaletteOpen) {
         this.commandPaletteOpen = false;
         return;
@@ -765,6 +1032,36 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // =========================================================================
+  // Three-Dot Context Menu
+  // =========================================================================
+
+  onBarMenuClick(order: WorkOrderDocument, pos: { x: number; y: number }): void {
+    this.menuOrder = order;
+    this.menuX = pos.x;
+    this.menuY = pos.y;
+    this.menuOpen = true;
+  }
+
+  onMenuEdit(): void {
+    if (this.menuOrder) {
+      this.onEditOrder(this.menuOrder);
+    }
+    this.closeMenu();
+  }
+
+  onMenuDelete(): void {
+    if (this.menuOrder) {
+      this.onDeleteOrder(this.menuOrder);
+    }
+    this.closeMenu();
+  }
+
+  closeMenu(): void {
+    this.menuOpen = false;
+    this.menuOrder = null;
+  }
+
+  // =========================================================================
   // Contextual Cursors
   // =========================================================================
 
@@ -786,6 +1083,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
   // Animate Initial Load
   // =========================================================================
 
+  // @upgrade: Replace GSAP dependency with Angular's built-in @angular/animations
+  // or Web Animations API for smaller bundle size. GSAP adds ~30KB gzipped.
   private animateInitialLoad(): void {
     const rows = document.querySelectorAll('.timeline-row');
     gsap.from(rows, {
@@ -794,16 +1093,6 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
       duration: 0.4,
       stagger: 0.04,
       ease: 'power3.out',
-    });
-
-    const bars = document.querySelectorAll('.work-order-bar');
-    gsap.from(bars, {
-      opacity: 0,
-      scaleX: 0.8,
-      duration: 0.5,
-      stagger: 0.05,
-      ease: 'power3.out',
-      delay: 0.2,
     });
   }
 
@@ -847,8 +1136,8 @@ export class TimelineComponent implements OnInit, AfterViewInit, OnDestroy {
     return order.docId;
   }
 
-  trackByColumn(index: number): number {
-    return index;
+  trackByColumn(index: number, col: TimelineColumn): string {
+    return col.date.toISOString();
   }
 
   get totalTimelineWidth(): number {

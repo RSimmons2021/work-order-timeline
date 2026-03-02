@@ -112,87 +112,113 @@ $bar-height: 38px;
   padding: 16px 32px;
 }
 
-.zoom-dropdown {
-  position: relative;
+// --- Timescale ng-select dropdown ---
+.zoom-dropdown-wrapper {
   display: inline-flex;
   align-items: center;
-  background: $color-bg-white;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 0;
-  overflow: visible;
+  gap: 8px;
 
   .zoom-label {
     font-family: 'Circular-Std', sans-serif;
     font-size: 13px;
     font-weight: 500;
     color: $color-text-secondary;
-    padding: 6px 0 6px 12px;
     user-select: none;
   }
+}
 
-  .zoom-trigger {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+.zoom-select {
+  min-width: 120px;
+
+  // Override ng-select container to match design
+  ::ng-deep .ng-select-container {
     font-family: 'Circular-Std', sans-serif;
     font-size: 13px;
     font-weight: 600;
     color: $color-primary-dark;
-    background: none;
-    border: none;
-    padding: 6px 12px 6px 8px;
-    cursor: pointer;
-    outline: none;
-    transition: color 0.15s ease-out;
-
-    .chevron {
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      color: $color-primary;
-    }
-
-    &.open .chevron {
-      transform: rotate(180deg);
-    }
-  }
-
-  .zoom-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 100;
     background: $color-bg-white;
     border: 1px solid $color-border;
     border-radius: 8px;
-    padding: 4px 0;
-    margin: 0;
-    list-style: none;
-    min-width: 120px;
-    box-shadow: 0 5px 15px rgba(216, 220, 235, 0.5);
-    transform-origin: top left;
-    animation: dropdownEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    min-height: 34px;
+    height: 34px;
+    cursor: pointer;
+    transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out;
 
-    .zoom-option {
-      display: flex;
-      align-items: center;
-      font-family: 'Circular-Std', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      color: $color-text-dark;
-      padding: 8px 16px;
-      cursor: pointer;
-      transition: background-color 0.1s ease-out;
+    &:hover {
+      border-color: $color-primary;
+    }
 
-      &:hover {
-        background: $color-bg-hover;
-      }
+    .ng-value-container {
+      padding-left: 12px;
 
-      &.active {
-        color: $color-primary;
+      .ng-value {
+        color: $color-primary-dark;
         font-weight: 600;
       }
     }
+
+    .ng-arrow-wrapper {
+      padding-right: 8px;
+
+      .ng-arrow {
+        border-color: $color-primary transparent transparent;
+      }
+    }
   }
+
+  // Focused state
+  ::ng-deep &.ng-select-opened .ng-select-container {
+    border-color: $color-primary;
+    box-shadow: 0 0 0 2px rgba($color-primary, 0.12);
+  }
+
+  // Dropdown panel
+  ::ng-deep ng-dropdown-panel {
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(216, 220, 235, 0.5);
+    margin-top: 4px;
+    overflow: hidden;
+
+    .ng-dropdown-panel-items {
+      .ng-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: 'Circular-Std', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text-dark;
+        padding: 8px 16px;
+        transition: background-color 0.1s ease-out;
+
+        &.ng-option-selected {
+          color: $color-primary;
+          font-weight: 600;
+          background: transparent;
+        }
+
+        &.ng-option-marked {
+          background: $color-bg-hover;
+        }
+
+        .zoom-option-label {
+          flex: 1;
+        }
+      }
+    }
+  }
+}
+
+.zoom-shortcut {
+  font-family: 'Circular-Std', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: $color-text-muted;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: auto;
 }
 
 .today-btn {
@@ -327,7 +353,7 @@ $bar-height: 38px;
     }
 
     .sidebar-row {
-      height: $row-height;
+      min-height: $row-height;
       display: flex;
       align-items: center;
       padding: 0 32px;
@@ -353,7 +379,7 @@ $bar-height: 38px;
   .body-timeline {
     flex: 1;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     position: relative;
 
     /* Custom scrollbar */
@@ -432,7 +458,7 @@ $bar-height: 38px;
   position: absolute;
   left: 0;
   right: 0;
-  height: $row-height;
+  min-height: $row-height;
   border-bottom: 1px solid $color-border-light;
   cursor: pointer;
   transition: background-color 0.15s ease-out;
@@ -478,6 +504,49 @@ $bar-height: 38px;
 }
 
 // =============================================================================
+// Three-Dot Context Menu (position: fixed to escape overflow)
+// =============================================================================
+.bar-context-menu {
+  position: fixed;
+  z-index: 1500;
+  background: $color-bg-white;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 4px 0;
+  min-width: 140px;
+  box-shadow: 0 5px 15px rgba(216, 220, 235, 0.5);
+  animation: dropdownEnter 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 16px;
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-text-dark;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.1s ease-out;
+
+    &:hover {
+      background: $color-bg-hover;
+    }
+
+    &.context-menu-delete {
+      color: #c0392b;
+
+      &:hover {
+        background: rgba(#c0392b, 0.06);
+      }
+    }
+  }
+}
+
+// =============================================================================
 // Panel Backdrop
 // =============================================================================
 .panel-backdrop {
@@ -486,6 +555,107 @@ $bar-height: 38px;
   background: rgba(3, 9, 41, 0.1);
   z-index: 999;
   animation: fadeIn 0.2s ease-out;
+}
+
+// =============================================================================
+// Delete Confirmation Dialog
+// =============================================================================
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 9, 41, 0.25);
+  z-index: 2000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.confirm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2001;
+  background: $color-bg-white;
+  border-radius: 12px;
+  padding: 28px 32px 24px;
+  width: 380px;
+  box-shadow: 0 12px 40px rgba(3, 9, 41, 0.18);
+  text-align: center;
+  animation: dialogEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .confirm-icon {
+    margin-bottom: 12px;
+    color: #c0392b;
+  }
+
+  .confirm-title {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: $color-text-dark;
+    margin: 0 0 8px;
+  }
+
+  .confirm-desc {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: $color-text-secondary;
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .confirm-btn {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 24px;
+    cursor: pointer;
+    transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  .confirm-btn-cancel {
+    color: $color-text-secondary;
+    background: $color-bg-page;
+    border: 1px solid $color-border;
+
+    &:hover {
+      background: $color-bg-white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  .confirm-btn-delete {
+    color: #fff;
+    background: #c0392b;
+
+    &:hover {
+      background: #a93226;
+      box-shadow: 0 2px 8px rgba(192, 57, 43, 0.25);
+    }
+  }
+}
+
+@keyframes dialogEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 // =============================================================================

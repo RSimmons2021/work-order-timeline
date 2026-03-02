@@ -1,6 +1,6 @@
 <div
   class="work-order-bar"
-  [class]="statusClass"
+  [ngClass]="statusClass"
   [style.left.px]="left"
   [style.width.px]="width"
   (mouseenter)="onBarMouseEnter()"
@@ -27,39 +27,41 @@
   <span class="bar-name">{{ order.data.name }}</span>
 
   <div class="bar-right">
-    <span class="bar-status-badge" [class]="statusClass">
-      <!-- Color-blind accessible status icon -->
-      @switch (order.data.status) {
-        @case ('open') {
-          <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
+    <!-- Status badge: hidden when bar is too narrow -->
+    @if (width > 140) {
+      <span class="bar-status-badge" [ngClass]="statusClass">
+        @switch (order.data.status) {
+          @case ('open') {
+            <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          }
+          @case ('in-progress') {
+            <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M3 2L8 5L3 8V2Z" fill="currentColor"/>
+            </svg>
+          }
+          @case ('complete') {
+            <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M2 5.5L4 7.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          }
+          @case ('blocked') {
+            <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          }
         }
-        @case ('in-progress') {
-          <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path d="M3 2L8 5L3 8V2Z" fill="currentColor"/>
-          </svg>
-        }
-        @case ('complete') {
-          <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path d="M2 5.5L4 7.5L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        }
-        @case ('blocked') {
-          <svg class="status-icon" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        }
-      }
-      {{ statusLabel }}
-    </span>
+        {{ statusLabel }}
+      </span>
+    }
 
+    <!-- Three-dot actions menu button -->
     <button
       class="bar-menu-btn"
-      (click)="toggleMenu($event)"
+      (click)="onMenuClick($event)"
       aria-label="Work order actions"
       aria-haspopup="true"
-      [attr.aria-expanded]="menuOpen"
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
@@ -76,29 +78,11 @@
     aria-label="Resize end date"
   ></div>
 
-  <!-- Dropdown menu -->
-  @if (menuOpen) {
-    <div class="bar-dropdown" role="menu">
-      <button class="dropdown-item" (click)="onEdit($event)" role="menuitem">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M10.5 1.5L12.5 3.5L4.5 11.5H2.5V9.5L10.5 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Edit
-      </button>
-      <button class="dropdown-item delete" (click)="onDelete($event)" role="menuitem">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M2 4H12M5 4V2.5C5 2.22386 5.22386 2 5.5 2H8.5C8.77614 2 9 2.22386 9 2.5V4M11 4V11.5C11 11.7761 10.7761 12 10.5 12H3.5C3.22386 12 3 11.7761 3 11.5V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Delete
-      </button>
-    </div>
-  }
-
   <!-- Tooltip on hover -->
-  @if (showTooltip && !menuOpen) {
+  @if (showTooltip) {
     <div class="bar-tooltip">
       <div class="tooltip-name">{{ order.data.name }}</div>
-      <div class="tooltip-status" [class]="statusClass">{{ statusLabel }}</div>
+      <div class="tooltip-status" [ngClass]="statusClass">{{ statusLabel }}</div>
       <div class="tooltip-dates">{{ order.data.startDate }} → {{ order.data.endDate }}</div>
       <div class="tooltip-relative">{{ relativeTimeLabel }}</div>
       @if (order.data.status === 'in-progress') {

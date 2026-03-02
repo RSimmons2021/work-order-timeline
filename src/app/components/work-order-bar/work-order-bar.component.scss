@@ -32,7 +32,6 @@ $bar-radius: 8px;
 // =============================================================================
 :host {
   position: absolute;
-  top: 5px;
   height: $bar-height;
   z-index: 5;
   display: block;
@@ -51,7 +50,6 @@ $bar-radius: 8px;
   padding: 0 10px;
   cursor: pointer;
   user-select: none;
-  overflow: hidden;
   transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
@@ -99,10 +97,11 @@ $bar-radius: 8px;
   top: 0;
   left: 0;
   height: 100%;
-  border-radius: $bar-radius 0 0 $bar-radius;
+  border-radius: $bar-radius;
   pointer-events: none;
   z-index: 0;
   transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 100%;
 
   .status-in-progress & {
     background: rgba($status-in-progress-text, 0.12);
@@ -184,7 +183,7 @@ $bar-radius: 8px;
   flex-shrink: 0;
   margin-left: 8px;
   position: relative;
-  z-index: 1;
+  z-index: 15;
 }
 
 // =============================================================================
@@ -241,57 +240,10 @@ $bar-radius: 8px;
   color: $color-text-secondary;
   opacity: 0;
   transition: opacity 0.15s ease-out, background-color 0.15s ease-out;
+  flex-shrink: 0;
 
   &:hover {
     background: rgba(0, 0, 0, 0.06);
-  }
-}
-
-// --- Dropdown Menu ---
-.bar-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 4px;
-  z-index: 100;
-  background: $color-bg-white;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 4px 0;
-  min-width: 140px;
-  box-shadow: 0 5px 15px rgba(200, 207, 233, 0.5);
-  animation: dropdownSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: top right;
-
-  .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    border: none;
-    background: none;
-    font-family: 'Circular-Std', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: $color-text-dark;
-    padding: 8px 14px;
-    cursor: pointer;
-    transition: background-color 0.1s ease-out;
-
-    &:hover {
-      background: rgba(86, 89, 255, 0.04);
-    }
-
-    &.delete {
-      color: #b13600;
-
-      &:hover {
-        background: rgba(177, 54, 0, 0.04);
-      }
-    }
-
-    svg {
-      flex-shrink: 0;
-    }
   }
 }
 
@@ -365,13 +317,21 @@ $bar-radius: 8px;
     margin-bottom: 2px;
   }
 
-  // Relative time label
   .tooltip-relative {
     font-family: 'Circular-Std', sans-serif;
     font-size: 11px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.55);
     margin-top: 2px;
+  }
+
+  .tooltip-hint {
+    font-family: 'Circular-Std', sans-serif;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   // Progress indicator in tooltip
@@ -411,17 +371,6 @@ $bar-radius: 8px;
 // =============================================================================
 // Animations
 // =============================================================================
-@keyframes dropdownSlide {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
 @keyframes tooltipEnter {
   from {
     opacity: 0;

@@ -27,6 +27,7 @@ Navigate to `http://localhost:4200/`.
 - **Keyboard Navigation** — Escape to close panel, Tab through form fields
 - **Today Button** — quickly jump viewport to center on today's date
 - **Tooltip on Bar Hover** — shows order name, status, and date range
+- **Infinite Horizontal Scroll** — dynamically loads more date columns as you scroll near edges
 - **Accessibility** — ARIA labels, focus management, reduced-motion support
 
 ## Architecture
@@ -55,6 +56,19 @@ src/app/
 **Form Architecture**: Single panel component handles both create and edit modes via a `mode` flag. Reactive Forms (FormGroup/FormControl) with custom cross-field validators for date range and overlap detection.
 
 **Animations**: GSAP (GreenSock) for complex, physics-based animations (panel slide, bar entrance). CSS transitions for micro-interactions (hover states, focus rings). 
+
+## Trade-offs & Decisions
+
+| Decision | Why | Alternative Considered |
+|----------|-----|----------------------|
+| **Context menu rendered at timeline level** | Three-dot dropdown needs to escape `overflow: hidden` on the scrollable grid. Rendering with `position: fixed` at the timeline root avoids all clipping/z-index issues. | Rendering inside bar component (failed due to overflow clipping). |
+| **GSAP for animations** | Provides physics-based easing curves and staggered entrance animations that CSS alone cannot achieve cleanly. | `@angular/animations` — lighter but limited stagger/timeline support. Marked with `@upgrade` for future migration. |
+| **localStorage for persistence** | Simple, zero-config persistence that meets the bonus requirement. No backend needed. | IndexedDB (better for large datasets, marked with `@upgrade`). |
+| **Signals in service, plain arrays in component** | Service uses Angular signals for reactive state. Timeline component reads snapshot arrays for simpler template binding and avoids signal unwrapping in loops. | Full signal-based reactivity — would need `computed()` for derived state like `getOrdersForCenter`. |
+| **Single panel for create + edit** | Reduces code duplication. A `mode` flag switches between pre-filled (edit) and empty (create) form state. | Separate components — more isolated but nearly identical templates. |
+| **Dynamic row heights** | Rows expand to fit multiple non-overlapping bars stacked vertically (43px per bar). Prevents visual overlap when a work center has many orders. | Fixed row height with horizontal stacking — harder to read. |
+| **Overlap validated on submit only** | Simpler implementation. Real-time validation during typing would need debounced async validators. | Live overlap feedback as dates change (marked with `@upgrade`). |
+| **Date-to-pixel linear mapping** | Straightforward proportional calculation across the full timeline range. Works well for the current column count (~25-60). | Virtual scrolling for 1000+ columns (marked with `@upgrade`). |
 
 ## Libraries
 
